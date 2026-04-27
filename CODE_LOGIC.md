@@ -12,7 +12,7 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 
 1. 读取命令行参数。
 2. 从 `cookie.txt` 读取你自己的 cookie。
-3. 从 `api.txt` 读取你自己准备的接口模板。
+3. 从项目里的 `api.txt` 读取接口模板。
 4. 抓取一级评论。
 5. 对有回复数的一级评论继续抓取二级评论。
 6. 简化评论字段。
@@ -32,7 +32,7 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 
 ### `api.txt`
 
-真实 `api.txt` 不上传到 GitHub，需要使用者自己准备。可以从 `api.example.txt` 复制一份再修改。
+`api.txt` 会随项目一起提供。
 
 它保存两个接口模板：
 

@@ -1,5 +1,4 @@
 cookie.txt
-api.txt
 outputs/*.json
 *.log
 .env
