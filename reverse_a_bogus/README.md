@@ -386,12 +386,4 @@ node .\reverse_a_bogus\validate_comments_api.js
 reverse_a_bogus/api_validation_result.json
 ```
 
-## 旧版参考
 
-`legacy_vm/` 里是旧 VM 签名方案和原始参考脚本：
-
-- `legacy_vm/bdm_sign_vm.js`：旧版 Node VM 签名脚本。
-- `legacy_vm/bdm_live.js`：抓取到的页面签名 JS 参考。
-- `legacy_vm/bdm.js`：备用页面签名 JS 参考。
-
-这些文件现在不参与主流程，只用于继续逆向或对比纯算法结果。
