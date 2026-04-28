@@ -34,7 +34,7 @@ outputs/douyin_comments_7626423682646326117.json
 
 ## 当前签名策略
 
-- 一级评论接口使用 `reverse_a_bogus/pure_a_bogus.js` 纯算法生成 `a_bogus`，不再依赖打开 Chrome，也不再调用 `bdm_sign_vm.js`。
+- 一级评论接口使用 `reverse_a_bogus/pure_a_bogus.js` 纯算法生成 `a_bogus`，不再依赖打开 Chrome。
 - 二级评论接口暂时复用 `api.txt` 第一行里已验证可用的模板签名。接口级验证发现，二级评论直接用当前纯算法重新生成 `a_bogus` 会触发 BDTuring。
 
 所以主命令仍然是：
