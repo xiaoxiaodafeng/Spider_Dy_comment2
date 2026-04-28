@@ -49,7 +49,6 @@ node .\douyin_crawler_server.js 视频ID --limit=500 --reply-limit=50
 - `reverse_a_bogus/pure_a_bogus.js`：一级评论接口使用的纯算法 `a_bogus` 生成器。
 - `reverse_a_bogus/core/`：纯算法签名的拆分模块，包含 payload、加密、编码、SM3 等逻辑。
 - `reverse_a_bogus/validate_comments_api.js`：接口级验证脚本，用来验证一级评论和二级评论接口返回状态。
-- `reverse_a_bogus/legacy_vm/`：旧 VM 签名方案和原始签名 JS 参考，不参与当前主流程。
 - `api.txt`：接口模板文件，第 1 行是二级评论接口，第 2 行是一级评论接口。
 - `cookie.example.txt`：Cookie 示例文件。
 - `cookie.txt`：你自己的真实 Cookie，本地使用，不要上传。
