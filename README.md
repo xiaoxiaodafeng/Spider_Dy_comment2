@@ -4,7 +4,7 @@
 
 ## 隐私说明
 
-`cookie.txt` 不会上传到 GitHub。使用前请复制示例文件，并填入你自己的抖音 Cookie：
+使用前请复制示例文件，并填入你自己的抖音 Cookie：
 
 ```powershell
 Copy-Item .\cookie.example.txt .\cookie.txt
