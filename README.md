@@ -67,14 +67,14 @@ node .\douyin_crawler_server.js 视频ID --limit=500 --reply-limit=50
     "user_id": "评论人ID",
     "user_name": "评论人昵称",
     "ip_label": "IP属地",
-    "digg_count": 10,
+    "digg_count": "一级评论点赞数",
     "replies": [
       {
         "cid": "二级评论ID",
         "text": "二级评论内容",
         "user_name": "评论人昵称",
         "ip_label": "IP属地",
-        "digg_count": 0
+        "digg_count": "二级评论点赞数"
       }
     ]
   }
