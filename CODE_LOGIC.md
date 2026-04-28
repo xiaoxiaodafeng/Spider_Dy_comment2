@@ -32,10 +32,6 @@ node .\douyin_crawler_server.js 7626423682646326117 --limit=500 --reply-limit=50
 
 纯算法签名的拆分模块目录。`payload.js` 负责组包，`finalize.js` 负责最终混淆加密，`sign.js` 负责生成签名并写回 URL，其他文件负责 SM3、Base64、RC4-like、字节转换和校验等小步骤。
 
-### `reverse_a_bogus/legacy_vm/`
-
-旧 VM 签名方案和原始签名 JS 参考目录，包含 `bdm_sign_vm.js`、`bdm_live.js`、`bdm.js`。这些文件现在不参与主抓取流程，只用于后续继续逆向或对比纯算法结果。
-
 ### `api.txt`
 
 保存两个接口模板：
