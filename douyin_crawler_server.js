@@ -1,10 +1,11 @@
 const fs = require("fs");
 const path = require("path");
-const { spawnSync } = require("child_process");
+const { signUrl: signPureUrl } = require("./reverse_a_bogus/pure_a_bogus");
 
 const API_PATH = path.join(__dirname, "api.txt");
-const SIGNER_PATH = path.join(__dirname, "bdm_sign_vm.js");
 const COOKIE_PATH = path.join(__dirname, "cookie.txt");
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36";
 
 function cliOption(name, fallback) {
   const prefix = `--${name}=`;
@@ -18,7 +19,7 @@ function cliFlag(name) {
 
 function usage() {
   console.log("Usage:");
-  console.log("  node .\\douyin_crawler_server.js VIDEO_ID --limit=500");
+  console.log("  node .\\douyin_crawler_server.js VIDEO_ID --limit=500 --reply-limit=50");
   console.log("");
   console.log("Options:");
   console.log("  --limit=500          max top-level comments");
@@ -49,11 +50,7 @@ function buildHeaders(cookie) {
     accept: "application/json, text/plain, */*",
     "accept-language": "en,zh-CN;q=0.9,zh;q=0.8,zh-TW;q=0.7",
     referer: "https://www.douyin.com/",
-    "user-agent":
-      cliOption(
-        "ua",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-      ),
+    "user-agent": cliOption("ua", DEFAULT_USER_AGENT),
     cookie,
   };
 }
@@ -87,21 +84,10 @@ function buildCapturedSignedUrl(rawUrl, awemeId, commentId, cursor, count) {
   return url.href;
 }
 
-function signUrl(rawUrl) {
-  const bdm = fs.existsSync(path.join(__dirname, "bdm_live.js")) ? "bdm_live.js" : "bdm.js";
-  const pageUrl = "https://www.douyin.com/";
-  const result = spawnSync(process.execPath, [SIGNER_PATH, rawUrl, "--drop-secsdk", `--bdm=${bdm}`, `--page-url=${pageUrl}`], {
-    cwd: __dirname,
-    encoding: "utf8",
-  });
-
-  if (result.status !== 0) {
-    throw new Error((result.stderr || result.stdout || "signer failed").trim());
-  }
-
-  const match = result.stdout.match(/^signed_url\s*=\s*(.+)$/m);
-  if (!match) throw new Error("signer output did not contain signed_url");
-  return match[1].trim();
+function signTopLevelUrl(rawUrl) {
+  return signPureUrl(rawUrl, {
+    userAgent: cliOption("ua", DEFAULT_USER_AGENT),
+  }).signedUrl;
 }
 
 async function requestJson(url, cookie) {
@@ -148,7 +134,7 @@ async function crawlTopComments({ awemeId, limit, pageSize, cookie }) {
   while (items.length < limit && hasMore) {
     const count = Math.min(pageSize, limit - items.length);
     const unsignedUrl = cleanUnsignedUrl(baseUrl, awemeId, "", cursor, count);
-    const signedUrl = signUrl(unsignedUrl);
+    const signedUrl = signTopLevelUrl(unsignedUrl);
     const json = await requestJson(signedUrl, cookie);
     const comments = Array.isArray(json.comments) ? json.comments : [];
 
@@ -178,6 +164,7 @@ async function crawlReplies({ awemeId, commentId, limit, pageSize, cookie }) {
 
   while (replies.length < limit && hasMore) {
     const count = Math.min(pageSize, limit - replies.length);
+    // 二级评论用纯算法重新签名会触发 BDTuring；这里复用 api.txt 第一行已验证可用的模板签名。
     const signedUrl = buildCapturedSignedUrl(baseUrl, awemeId, commentId, cursor, count);
     const json = await requestJson(signedUrl, cookie);
     const comments = Array.isArray(json.comments) ? json.comments : [];

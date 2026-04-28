@@ -2,50 +2,48 @@
 
 ## 总体流程
 
-入口文件是 `douyin_crawler_server.js`。运行命令时传入视频 ID：
+入口文件是 `douyin_crawler_server.js`。运行时传入视频 ID：
 
 ```powershell
-node .\douyin_crawler_server.js 视频ID --limit=500
+node .\douyin_crawler_server.js 7626423682646326117 --limit=500 --reply-limit=50
 ```
 
-脚本会按下面的顺序执行：
+脚本会按下面顺序执行：
 
 1. 读取命令行参数。
-2. 从 `cookie.txt` 读取你自己的 cookie。
-3. 从项目里的 `api.txt` 读取接口模板。
+2. 从 `cookie.txt` 或环境变量 `DOUYIN_COOKIE` 读取 Cookie。
+3. 从 `api.txt` 读取接口模板。
 4. 抓取一级评论。
 5. 对有回复数的一级评论继续抓取二级评论。
-6. 简化评论字段。
+6. 精简评论字段。
 7. 写入 `outputs/douyin_comments_视频ID.json`。
 
 ## 核心文件
 
 ### `douyin_crawler_server.js`
 
-主抓取脚本，负责解析参数、读取配置、构造请求、调用签名、翻页抓评论和写入 JSON。
+主抓取脚本，负责参数解析、读取配置、构造请求、分页抓取、字段精简和写入 JSON。
 
-### `bdm_sign_vm.js`
+### `reverse_a_bogus/pure_a_bogus.js`
 
-本地签名脚本，负责给一级评论接口生成新的 `a_bogus`。
+纯算法 `a_bogus` 的统一入口。当前主脚本用它给一级评论接口重新签名，不再依赖 `bdm_sign_vm.js`、`bdm_live.js` 或 Chrome。
 
-它会在 Node.js 的 `vm` 里模拟浏览器环境，加载 `bdm_live.js` 或 `bdm.js`，然后触发 `bdms` 对 URL 进行签名。
+### `reverse_a_bogus/core/`
+
+纯算法签名的拆分模块目录。`payload.js` 负责组包，`finalize.js` 负责最终混淆加密，`sign.js` 负责生成签名并写回 URL，其他文件负责 SM3、Base64、RC4-like、字节转换和校验等小步骤。
+
+### `reverse_a_bogus/legacy_vm/`
+
+旧 VM 签名方案和原始签名 JS 参考目录，包含 `bdm_sign_vm.js`、`bdm_live.js`、`bdm.js`。这些文件现在不参与主抓取流程，只用于后续继续逆向或对比纯算法结果。
 
 ### `api.txt`
 
-`api.txt` 会随项目一起提供。
-
-它保存两个接口模板：
+保存两个接口模板：
 
 - 第 1 行：二级评论接口 `/aweme/v1/web/comment/list/reply/`
 - 第 2 行：一级评论接口 `/aweme/v1/web/comment/list/`
 
-主脚本会替换里面的视频 ID、评论 ID、分页 cursor 和 count。
-
-### `cookie.txt`
-
-真实 `cookie.txt` 不上传到 GitHub，需要使用者自己准备。可以从 `cookie.example.txt` 复制一份再填入自己的 cookie。
-
-脚本默认从这个文件读取，也支持用环境变量 `DOUYIN_COOKIE` 覆盖。
+脚本会替换里面的视频 ID、评论 ID、分页 `cursor` 和 `count`。
 
 ## 一级评论抓取逻辑
 
@@ -57,12 +55,10 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 2. 替换 `aweme_id` 为命令行传入的视频 ID。
 3. 替换 `cursor` 和 `count`。
 4. 删除旧的 `a_bogus`、`timestamp`、`x-secsdk-web-signature`。
-5. 调用 `signUrl` 重新生成签名 URL。
-6. 请求接口，读取 `comments`。
+5. 调用 `reverse_a_bogus/pure_a_bogus.js` 重新生成 `a_bogus`。
+6. 请求接口并读取 `comments`。
 7. 保存评论数据和该评论的二级评论数量。
 8. 根据接口返回的 `cursor` 和 `has_more` 继续翻页。
-
-一级评论需要本地重新签名，否则换视频 ID 或翻页时容易失效。
 
 ## 二级评论抓取逻辑
 
@@ -74,17 +70,17 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 2. 替换 `item_id` 为视频 ID。
 3. 替换 `comment_id` 为一级评论 ID。
 4. 替换 `cursor` 和 `count`。
-5. 保留接口模板里的可用 `a_bogus`。
-6. 请求接口，读取二级评论。
+5. 保留模板中的可用 `a_bogus`。
+6. 请求接口并读取二级评论。
 7. 根据 `cursor` 和 `has_more` 继续翻页。
 
-这里没有走本地重新签名，是因为测试发现二级评论接口用本地签名会触发 BDTuring，而复用 `api.txt` 中捕获到的二级评论 `a_bogus` 可以跨评论 ID、跨视频 ID、跨分页正常使用。
+这里没有用纯算法重新签二级评论。原因是接口级验证发现：一级评论用纯算法签名可以稳定返回 JSON，但二级评论用当前纯算法签名会触发 `x-vc-bdturing-parameters`。目前稳定方案是复用 `api.txt` 第一行中抓包得到的二级评论模板签名。
 
 ## 字段精简逻辑
 
 对应函数：`simplifyComment`
 
-原始评论对象字段很多，脚本只保留这些：
+最终只保留这些字段：
 
 - `cid`：评论 ID。
 - `text`：评论内容。
@@ -95,7 +91,7 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 - `ip_label`：IP 属地。
 - `digg_count`：点赞数。
 
-空值字段会被自动删除。
+空值字段会自动删除。
 
 ## 输出 JSON 结构
 
@@ -123,11 +119,3 @@ node .\douyin_crawler_server.js 视频ID --limit=500
 ```
 
 没有二级评论的一级评论不会写 `replies` 字段。
-
-## 注意事项
-
-- `cookie.txt` 过期后需要重新更新。
-- 不要把自己的 `cookie.txt` 上传到公开仓库。
-- `api.txt` 中第 1 行的二级评论接口模板很关键，不要清空。
-- 如果一级评论接口被拦，优先检查 cookie 和 `bdm_live.js` 是否还可用。
-- 输出目录默认是 `outputs/`，输出 JSON 不会上传到 GitHub。
